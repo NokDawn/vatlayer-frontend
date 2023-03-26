@@ -2,6 +2,9 @@ import './App.css';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import axios from 'axios';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const schema = yup.object({
   nip: yup
@@ -12,7 +15,21 @@ const schema = yup.object({
     .required('Numer NIP jest wymagany'),
 });
 
+const POLISH_COUNTRY_CODE = 'PL';
+const VAT_LAYER_API_URL = 'http://apilayer.net/api/validate?';
+
 type FormData = yup.InferType<typeof schema>;
+
+type VatLayerData = {
+  company_address: string;
+  company_name: string;
+  company_code: string;
+  database: string;
+  format_valid: boolean;
+  query: string;
+  valid: boolean;
+  vat_number: string;
+};
 
 function App() {
   const {
@@ -22,9 +39,27 @@ function App() {
   } = useForm<FormData>({
     resolver: yupResolver(schema),
   });
-  const onSubmit = (data: FormData) => {
-    console.log(data);
+
+  const buildUrlQuery = (nip: number) => {
+    const query = new URLSearchParams({
+      access_key: import.meta.env.VITE_VATLAYER_API,
+      country_code: POLISH_COUNTRY_CODE,
+      vat_number: `${POLISH_COUNTRY_CODE}${nip}`,
+    }).toString();
+    return VAT_LAYER_API_URL + query;
   };
+
+  const onSubmit = async (data: FormData) => {
+    const url = buildUrlQuery(data.nip);
+
+    try {
+      const { data } = await axios.post<VatLayerData>(url);
+    } catch (error) {
+      notify();
+    }
+  };
+
+  const notify = () => toast.error('Wystąpił jakiś nieczekiwany błąd!');
 
   const isNipError = errors.nip;
 
@@ -59,6 +94,7 @@ function App() {
           <button className="btn btn-primary mt-2">Pobierz dane</button>
         </div>
       </form>
+      <ToastContainer position="bottom-right" />
     </div>
   );
 }
