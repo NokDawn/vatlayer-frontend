@@ -18,6 +18,7 @@ export const Form: FC<FormProps> = ({ onVatDataChange }) => {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<FormData>({
     resolver: yupResolver(validationSchema),
   });
@@ -31,10 +32,24 @@ export const Form: FC<FormProps> = ({ onVatDataChange }) => {
     try {
       const { data } = await axios.post<VatLayerData>(url);
       onVatDataChange(data);
-      const storedData = JSON.parse(
-        localStorage.getItem(VAT_LAYER_LOCAL_STORAGE_PREFIX)
-      );
-      localStorage.setItem(VAT_LAYER_LOCAL_STORAGE_PREFIX, data.vat_number);
+
+      const storedData = localStorage.getItem(VAT_LAYER_LOCAL_STORAGE_PREFIX);
+
+      if (storedData) {
+        const storedDataArray = JSON.parse(storedData);
+        const newDataToStore = [...storedDataArray, data];
+        localStorage.setItem(
+          VAT_LAYER_LOCAL_STORAGE_PREFIX,
+          JSON.stringify(newDataToStore)
+        );
+      } else {
+        localStorage.setItem(
+          VAT_LAYER_LOCAL_STORAGE_PREFIX,
+          JSON.stringify([data])
+        );
+      }
+
+      reset();
       successNotification();
     } catch (error) {
       errorNotification();
