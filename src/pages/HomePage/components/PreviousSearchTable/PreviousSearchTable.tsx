@@ -13,7 +13,7 @@ export const PreviousSearchTable = () => {
     }
   }, [storedData]);
 
-  if (!tableData) return null;
+  if (!tableData.length) return null;
 
   return (
     <div className="overflow-x-auto mt-4">
