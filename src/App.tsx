@@ -1,10 +1,11 @@
-import './App.css';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import './App.css';
+import { useState } from 'react';
 
 const schema = yup.object({
   nip: yup
@@ -23,7 +24,7 @@ type FormData = yup.InferType<typeof schema>;
 type VatLayerData = {
   company_address: string;
   company_name: string;
-  company_code: string;
+  country_code: string;
   database: string;
   format_valid: boolean;
   query: string;
@@ -32,6 +33,8 @@ type VatLayerData = {
 };
 
 function App() {
+  const [vatData, setVatData] = useState<VatLayerData | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(false);
   const {
     register,
     handleSubmit,
@@ -39,6 +42,8 @@ function App() {
   } = useForm<FormData>({
     resolver: yupResolver(schema),
   });
+
+  console.log({ vatData });
 
   const buildUrlQuery = (nip: number) => {
     const query = new URLSearchParams({
@@ -50,16 +55,24 @@ function App() {
   };
 
   const onSubmit = async (data: FormData) => {
+    setIsLoading(true);
     const url = buildUrlQuery(data.nip);
 
     try {
       const { data } = await axios.post<VatLayerData>(url);
+      setVatData(data);
+      successNotification();
     } catch (error) {
-      notify();
+      errorNotification();
     }
+    setIsLoading(false);
   };
 
-  const notify = () => toast.error('Wystąpił jakiś nieczekiwany błąd!');
+  const errorNotification = () =>
+    toast.error('Wystąpił jakiś nieczekiwany błąd!');
+  const successNotification = () => {
+    toast.success('Dane zostały pobrane pomyślnie!');
+  };
 
   const isNipError = errors.nip;
 
@@ -91,9 +104,29 @@ function App() {
               </span>
             </label>
           )}
-          <button className="btn btn-primary mt-2">Pobierz dane</button>
+          <button className={`btn btn-primary mt-2 ${isLoading && 'loading'}`}>
+            Pobierz dane
+          </button>
         </div>
       </form>
+      {vatData?.valid && (
+        <div className="stats shadow mt-4">
+          <div className="stat">
+            <div className="stat-title">{vatData.company_name}</div>
+            <div className="stat-value">{vatData.vat_number}</div>
+            <div className="stat-desc">{vatData.company_address}</div>
+          </div>
+        </div>
+      )}
+      {vatData && !vatData?.valid && (
+        <div className="stats shadow mt-4">
+          <div className="stat">
+            <div className="stat-title">
+              Dany numer NIP nie jest płatnikiem VAT
+            </div>
+          </div>
+        </div>
+      )}
       <ToastContainer position="bottom-right" />
     </div>
   );
